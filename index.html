@@ -1,0 +1,1330 @@
+<!DOCTYPE html>
+<html lang="tr" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PLAYFKS — Oyun, Espor & Topluluk Portalı</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Rajdhani:wght@600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        display: ['Rajdhani', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #070a10;
+            color: #f1f5f9;
+            overflow-x: hidden;
+        }
+        .font-display {
+            font-family: 'Rajdhani', sans-serif;
+        }
+        .gaming-grid-bg {
+            background-image:
+                radial-gradient(circle at 15% 15%, rgba(6, 182, 212, 0.12) 0%, transparent 40%),
+                radial-gradient(circle at 85% 10%, rgba(16, 185, 129, 0.10) 0%, transparent 40%),
+                linear-gradient(to right, rgba(30, 41, 59, 0.25) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(30, 41, 59, 0.25) 1px, transparent 1px);
+            background-size: 100% 100%, 100% 100%, 40px 40px, 40px 40px;
+        }
+        .card-hover {
+            transition: transform 0.22s ease, border-color 0.22s ease, box-shadow 0.22s ease;
+        }
+        .card-hover:hover {
+            transform: translateY(-4px);
+            border-color: rgba(34, 211, 238, 0.45);
+            box-shadow: 0 12px 32px -10px rgba(6, 182, 212, 0.25);
+        }
+        /* Özel kaydırma çubuğu */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0b0f19;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #1e293b;
+            border-radius: 9999px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #334155;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col gaming-grid-bg selection:bg-cyan-400 selection:text-slate-950">
+
+    <!-- Bildirim Toast Kutusu -->
+    <div id="toast-container" class="fixed bottom-5 right-5 z-[100] flex flex-col gap-2.5 max-w-sm w-[calc(100%-2.5rem)] pointer-events-none"></div>
+
+    <!-- Bağlantı / Hata Uyarı Bandı -->
+    <div id="connection-banner" class="hidden bg-amber-500/15 border-b border-amber-500/30 text-amber-200 px-4 py-2 text-xs sm:text-sm text-center">
+        <i class="fa-solid fa-circle-exclamation mr-1.5 text-amber-400"></i>
+        <span id="connection-banner-text">Bulut bağlantısı kuruluyor...</span>
+    </div>
+
+    <!-- Üst Navigasyon Çubuğu -->
+    <header class="sticky top-0 z-40 bg-[#090d16]/90 backdrop-blur-xl border-b border-slate-800/80">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 sm:h-20 flex items-center justify-between gap-3">
+            <!-- Marka Logosu -->
+            <a href="#" onclick="resetFilters(); return false;" class="flex items-center gap-3 group shrink-0">
+                <div class="w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-gradient-to-br from-cyan-400 via-blue-500 to-emerald-400 p-[2px] shadow-lg shadow-cyan-500/20">
+                    <div class="w-full h-full bg-[#090d16] rounded-[10px] flex items-center justify-center">
+                        <i class="fa-solid fa-gamepad text-cyan-400 text-lg sm:text-xl group-hover:scale-110 transition"></i>
+                    </div>
+                </div>
+                <div>
+                    <div class="font-display text-2xl sm:text-3xl font-extrabold tracking-wider text-white leading-none">
+                        PLAY<span class="text-cyan-400">FKS</span>
+                    </div>
+                    <p class="text-[10px] sm:text-[11px] font-medium tracking-widest text-slate-400 uppercase mt-0.5">Oyun & Espor Ağı</p>
+                </div>
+            </a>
+
+            <!-- Sağ Kontrol Alanı -->
+            <div class="flex items-center gap-2 sm:gap-3">
+                <!-- SADECE ADMIN ("Admin" / "852456Za") GİRİŞ YAPTIĞINDA GÖRÜNÜR -->
+                <button id="nav-publish-btn" type="button" onclick="openPublisherModal()" style="display: none;" class="items-center gap-2 px-3.5 sm:px-4 py-2.5 rounded-xl bg-gradient-to-r from-cyan-400 to-emerald-400 hover:from-cyan-300 hover:to-emerald-300 text-slate-950 font-extrabold text-xs sm:text-sm shadow-lg shadow-cyan-500/25 transition transform active:scale-95 cursor-pointer">
+                    <i class="fa-solid fa-plus"></i>
+                    <span>+ Yeni Haber Yayınla</span>
+                </button>
+
+                <!-- Giriş Yapmamış Ziyaretçi Butonları -->
+                <div id="guest-controls" class="flex items-center gap-2">
+                    <button type="button" onclick="openAuthModal('login')" class="px-3.5 sm:px-4 py-2 rounded-xl bg-slate-800/90 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs sm:text-sm font-semibold transition cursor-pointer">
+                        Giriş Yap
+                    </button>
+                    <button type="button" onclick="openAuthModal('register')" class="px-3.5 sm:px-4 py-2 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 text-xs sm:text-sm font-bold shadow-md shadow-cyan-500/20 transition cursor-pointer">
+                        Kayıt Ol
+                    </button>
+                </div>
+
+                <!-- Giriş Yapmış Kullanıcı Paneli -->
+                <div id="user-controls" style="display: none;" class="items-center gap-2 sm:gap-3 bg-[#111726] border border-slate-800 rounded-xl px-2.5 sm:px-3.5 py-1.5">
+                    <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center text-white font-bold text-sm shrink-0" id="user-avatar">
+                        P
+                    </div>
+                    <div class="hidden sm:block leading-tight">
+                        <div class="flex items-center gap-1.5">
+                            <span id="user-display-name" class="text-xs font-bold text-white">Oyuncu</span>
+                            <span id="admin-badge" style="display: none;" class="px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-[10px] font-bold">
+                                <i class="fa-solid fa-crown mr-0.5"></i>Yönetici
+                            </span>
+                        </div>
+                        <span class="text-[10px] text-slate-400 block">48 saat akıllı oturum aktif</span>
+                    </div>
+                    <button type="button" onclick="logoutUser()" title="Çıkış Yap" class="p-2 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 transition cursor-pointer">
+                        <i class="fa-solid fa-right-from-bracket text-sm"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Ana İçerik -->
+    <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-10">
+
+        <!-- Hero / Portal Başlık Kartı -->
+        <section class="relative overflow-hidden rounded-2xl bg-gradient-to-br from-[#101726] via-[#0c121e] to-[#090d16] border border-slate-800/90 p-6 sm:p-8 mb-8 shadow-2xl">
+            <div class="absolute -right-16 -top-16 w-64 h-64 bg-cyan-500/10 rounded-full blur-3xl pointer-events-none"></div>
+            <div class="absolute -left-16 -bottom-16 w-64 h-64 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none"></div>
+
+            <div class="relative flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+                <div class="max-w-2xl">
+                    <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cyan-500/10 border border-cyan-500/30 text-cyan-300 text-xs font-semibold mb-3">
+                        <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                        PLAYFKS CANLI HABER & DUYURU MERKEZİ
+                    </div>
+                    <h1 class="font-display text-3xl sm:text-5xl font-extrabold text-white tracking-tight leading-tight">
+                        OYUN DÜNYASININ NABZI <span class="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-emerald-400">PLAYFKS</span>'TE ATIYOR
+                    </h1>
+                    <p class="text-slate-400 text-sm sm:text-base mt-3 leading-relaxed">
+                        En güncel oyun duyuruları, turnuva gelişmeleri ve topluluk haberleri anında burada yayınlanır. Hesabına giriş yap; 2 gün boyunca yeniden giriş yapmana gerek kalmadan takipte kal.
+                    </p>
+                </div>
+
+                <!-- Canlı İstatistik Kutuları -->
+                <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-2 gap-3 shrink-0">
+                    <div class="bg-[#090d16]/90 border border-slate-800 rounded-xl p-3.5 min-w-[135px]">
+                        <div class="text-[11px] font-semibold text-slate-400 uppercase">Yayınlanan Haber</div>
+                        <div id="stat-total-news" class="font-display text-2xl sm:text-3xl font-extrabold text-white mt-0.5">0</div>
+                    </div>
+                    <div class="bg-[#090d16]/90 border border-slate-800 rounded-xl p-3.5 min-w-[135px]">
+                        <div class="text-[11px] font-semibold text-slate-400 uppercase">Sistem Durumu</div>
+                        <div id="stat-sync-status" class="font-display text-lg sm:text-xl font-bold text-emerald-400 mt-1 flex items-center gap-1.5">
+                            <i class="fa-solid fa-cloud-check text-sm"></i> Bağlanıyor
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Kategori Filtreleri ve Arama -->
+        <section class="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4 mb-6">
+            <div class="flex items-center gap-2 overflow-x-auto pb-1">
+                <button type="button" onclick="setCategoryFilter('ALL')" data-cat="ALL" class="cat-btn px-4 py-2 rounded-xl text-xs sm:text-sm font-bold bg-cyan-500 text-slate-950 transition whitespace-nowrap cursor-pointer">
+                    Tümü
+                </button>
+                <button type="button" onclick="setCategoryFilter('Güncelleme')" data-cat="Güncelleme" class="cat-btn px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold bg-[#111726] text-slate-300 hover:text-white border border-slate-800 transition whitespace-nowrap cursor-pointer">
+                    Güncelleme
+                </button>
+                <button type="button" onclick="setCategoryFilter('Turnuva')" data-cat="Turnuva" class="cat-btn px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold bg-[#111726] text-slate-300 hover:text-white border border-slate-800 transition whitespace-nowrap cursor-pointer">
+                    Turnuva
+                </button>
+                <button type="button" onclick="setCategoryFilter('Duyuru')" data-cat="Duyuru" class="cat-btn px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold bg-[#111726] text-slate-300 hover:text-white border border-slate-800 transition whitespace-nowrap cursor-pointer">
+                    Duyuru
+                </button>
+                <button type="button" onclick="setCategoryFilter('Topluluk')" data-cat="Topluluk" class="cat-btn px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold bg-[#111726] text-slate-300 hover:text-white border border-slate-800 transition whitespace-nowrap cursor-pointer">
+                    Topluluk
+                </button>
+            </div>
+
+            <div class="relative w-full md:w-72">
+                <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500 text-sm"></i>
+                <input type="text" id="search-input" oninput="handleSearchInput(this.value)" placeholder="Haberlerde ara..." class="w-full pl-10 pr-4 py-2.5 rounded-xl bg-[#111726] border border-slate-800 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-cyan-400 transition">
+            </div>
+        </section>
+
+        <!-- Haber Akışı Başlığı ve İkinci Yayınla Butonu -->
+        <section>
+            <div class="flex flex-wrap items-center justify-between gap-3 mb-5">
+                <h2 class="font-display text-2xl sm:text-3xl font-extrabold text-white flex items-center gap-2.5">
+                    <span class="w-2 h-7 rounded-full bg-gradient-to-b from-cyan-400 to-emerald-400 inline-block"></span>
+                    YAYINLANAN HABERLER
+                </h2>
+
+                <div class="flex flex-wrap items-center gap-2.5">
+                    <!-- SADECE ADMIN ("Admin" / "852456Za") GİRİŞ YAPTIĞINDA GÖRÜNÜR -->
+                    <button id="section-publish-btn" type="button" onclick="openPublisherModal()" style="display: none;" class="items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-cyan-400 to-emerald-400 hover:from-cyan-300 hover:to-emerald-300 text-slate-950 font-extrabold text-xs sm:text-sm shadow-lg shadow-cyan-500/25 transition transform active:scale-95 cursor-pointer">
+                        <i class="fa-solid fa-plus"></i>
+                        <span>+ Yeni Haber Yayınla</span>
+                    </button>
+
+                    <span class="text-xs font-medium text-slate-400 flex items-center gap-1.5 bg-[#111726] px-3 py-2 rounded-xl border border-slate-800">
+                        <i class="fa-solid fa-tower-broadcast text-cyan-400"></i> Gerçek Zamanlı Akış
+                    </span>
+                </div>
+            </div>
+
+            <!-- Yükleniyor Göstergesi -->
+            <div id="news-loading" class="py-16 text-center">
+                <div class="inline-block w-10 h-10 border-4 border-cyan-400/30 border-t-cyan-400 rounded-full animate-spin mb-3"></div>
+                <p class="text-sm text-slate-400">Haberler buluttan yükleniyor...</p>
+            </div>
+
+            <!-- Boş Durum (Hiç haber yoksa) -->
+            <div id="news-empty-state" class="hidden rounded-2xl bg-[#0e1422] border border-slate-800/90 p-10 sm:p-14 text-center">
+                <div class="w-16 h-16 rounded-2xl bg-slate-800/80 border border-slate-700 flex items-center justify-center mx-auto mb-4 text-slate-400 text-2xl">
+                    <i class="fa-regular fa-newspaper"></i>
+                </div>
+                <h3 class="font-display text-2xl font-bold text-white mb-2">Henüz yayınlanmış bir haber bulunmuyor.</h3>
+                <p class="text-sm text-slate-400 max-w-md mx-auto">
+                    Şu anda sitede kayıtlı bir haber yok. Yönetici hesabı ile yeni bir haber yayınlandığında burada tüm cihazlarda kalıcı olarak görünecektir.
+                </p>
+                <div class="mt-6">
+                    <button id="empty-publish-btn" type="button" onclick="openPublisherModal()" style="display: none;" class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-cyan-400 to-emerald-400 hover:from-cyan-300 hover:to-emerald-300 text-slate-950 font-extrabold text-sm shadow-lg shadow-cyan-500/25 transition cursor-pointer">
+                        <i class="fa-solid fa-plus"></i>
+                        <span>+ Yeni Haber Yayınla</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Haber Kartları Izgarası -->
+            <div id="news-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+        </section>
+    </main>
+
+    <!-- Alt Bilgi (Footer) -->
+    <footer class="border-t border-slate-800/80 bg-[#080b13] mt-16">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-500">
+            <div class="flex items-center gap-2">
+                <span class="font-display text-base font-bold text-white">PLAY<span class="text-cyan-400">FKS</span></span>
+                <span>© 2026 Tüm Hakları Saklıdır.</span>
+            </div>
+            <div class="text-slate-500">
+                Gerçek Zamanlı Bulut Altyapısı • 48 Saat Akıllı Oturum Koruması
+            </div>
+        </div>
+    </footer>
+
+    <!-- ===================================================================== -->
+    <!-- MODAL 1: KAYIT OL / GİRİŞ YAP                                         -->
+    <!-- ===================================================================== -->
+    <div id="auth-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+        <div class="bg-[#0e1422] border border-slate-800 rounded-2xl max-w-md w-full p-6 sm:p-7 shadow-2xl relative">
+            <button type="button" onclick="closeAuthModal()" class="absolute top-4 right-4 w-9 h-9 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-400 hover:text-white flex items-center justify-center transition cursor-pointer">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+
+            <div class="flex items-center gap-2.5 mb-5">
+                <div class="w-9 h-9 rounded-xl bg-cyan-500/15 border border-cyan-500/30 flex items-center justify-center text-cyan-400">
+                    <i class="fa-solid fa-user-astronaut"></i>
+                </div>
+                <div>
+                    <h3 class="font-display text-2xl font-bold text-white leading-none">PLAYFKS HESABI</h3>
+                    <p class="text-xs text-slate-400 mt-1">Giriş yaptıktan sonra 48 saat oturum açık kalır</p>
+                </div>
+            </div>
+
+            <!-- Sekmeler -->
+            <div class="grid grid-cols-2 gap-2 p-1 rounded-xl bg-[#080b13] border border-slate-800 mb-5">
+                <button type="button" id="tab-login" onclick="switchAuthTab('login')" class="py-2 rounded-lg text-xs sm:text-sm font-bold bg-cyan-500 text-slate-950 transition cursor-pointer">
+                    Giriş Yap
+                </button>
+                <button type="button" id="tab-register" onclick="switchAuthTab('register')" class="py-2 rounded-lg text-xs sm:text-sm font-semibold text-slate-400 hover:text-white transition cursor-pointer">
+                    Kayıt Ol
+                </button>
+            </div>
+
+            <!-- Giriş Formu -->
+            <form id="form-login" onsubmit="handleLoginSubmit(event)" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-300 mb-1.5">Kullanıcı Adı</label>
+                    <input type="text" id="login-username" required minlength="3" placeholder="Kullanıcı adınızı girin" class="w-full px-3.5 py-2.5 rounded-xl bg-[#080b13] border border-slate-800 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-cyan-400">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-300 mb-1.5">Şifre</label>
+                    <input type="password" id="login-password" required minlength="4" placeholder="••••••••" class="w-full px-3.5 py-2.5 rounded-xl bg-[#080b13] border border-slate-800 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-cyan-400">
+                </div>
+                <button type="submit" id="btn-submit-login" class="w-full py-3 rounded-xl bg-gradient-to-r from-cyan-400 to-blue-500 hover:from-cyan-300 hover:to-blue-400 text-slate-950 font-extrabold text-sm shadow-lg shadow-cyan-500/20 transition cursor-pointer">
+                    Giriş Yap
+                </button>
+            </form>
+
+            <!-- Kayıt Formu -->
+            <form id="form-register" onsubmit="handleRegisterSubmit(event)" class="space-y-4 hidden">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-300 mb-1.5">Kullanıcı Adı</label>
+                    <input type="text" id="reg-username" required minlength="3" maxlength="24" placeholder="Örn: FKS_Player" class="w-full px-3.5 py-2.5 rounded-xl bg-[#080b13] border border-slate-800 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-cyan-400">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-300 mb-1.5">Şifre</label>
+                    <input type="password" id="reg-password" required minlength="4" placeholder="En az 4 karakter" class="w-full px-3.5 py-2.5 rounded-xl bg-[#080b13] border border-slate-800 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-cyan-400">
+                </div>
+                <button type="submit" id="btn-submit-register" class="w-full py-3 rounded-xl bg-gradient-to-r from-emerald-400 to-cyan-400 hover:from-emerald-300 hover:to-cyan-300 text-slate-950 font-extrabold text-sm shadow-lg shadow-emerald-500/20 transition cursor-pointer">
+                    Kayıt Ol ve Giriş Yap
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- ===================================================================== -->
+    <!-- MODAL 2: YENİ HABER YAYINLA (SADECE YETKİLİ SAHİP BİLGİSAYARINDA)      -->
+    <!-- ===================================================================== -->
+    <div id="publisher-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/80 backdrop-blur-sm p-4 overflow-y-auto">
+        <div class="bg-[#0e1422] border border-slate-800 rounded-2xl max-w-2xl w-full p-6 sm:p-7 shadow-2xl relative my-auto">
+            <button type="button" onclick="closePublisherModal()" class="absolute top-4 right-4 w-9 h-9 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-400 hover:text-white flex items-center justify-center transition cursor-pointer">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+
+            <div class="flex items-center gap-3 mb-5">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-400 to-emerald-400 flex items-center justify-center text-slate-950 font-bold">
+                    <i class="fa-solid fa-pen-nib"></i>
+                </div>
+                <div>
+                    <h3 class="font-display text-2xl font-extrabold text-white leading-none">YENİ HABER YAYINLA</h3>
+                    <p class="text-xs text-slate-400 mt-1">Yayınladığın haber sitedeki herkeste kalıcı olarak görünecek</p>
+                </div>
+            </div>
+
+            <form id="form-publish-news" onsubmit="handlePublishNews(event)" class="space-y-4">
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div class="sm:col-span-2">
+                        <label class="block text-xs font-semibold text-slate-300 mb-1.5">Haber Başlığı *</label>
+                        <input type="text" id="news-title" required maxlength="120" placeholder="Örn: Büyük Sezon Turnuvası Başlıyor!" class="w-full px-3.5 py-2.5 rounded-xl bg-[#080b13] border border-slate-800 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-cyan-400">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-300 mb-1.5">Kategori *</label>
+                        <select id="news-category" class="w-full px-3.5 py-2.5 rounded-xl bg-[#080b13] border border-slate-800 text-sm text-white focus:outline-none focus:border-cyan-400">
+                            <option value="Güncelleme">Güncelleme</option>
+                            <option value="Duyuru">Duyuru</option>
+                            <option value="Turnuva">Turnuva</option>
+                            <option value="Topluluk">Topluluk</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Görsel Yükleme veya URL -->
+                <div class="bg-[#080b13] border border-slate-800 rounded-xl p-4 space-y-3">
+                    <div class="flex items-center justify-between">
+                        <label class="text-xs font-semibold text-slate-300">Haber Görseli (Bilgisayardan Seç veya URL Gir)</label>
+                        <button type="button" onclick="clearSelectedImage()" id="btn-clear-image" class="hidden text-xs text-rose-400 hover:underline cursor-pointer">
+                            Görseli Kaldır
+                        </button>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <label class="flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-xl bg-[#111726] hover:bg-slate-800 border border-dashed border-slate-700 text-xs font-semibold text-cyan-300 cursor-pointer transition">
+                            <i class="fa-solid fa-image"></i>
+                            <span>Bilgisayardan Görsel Seç</span>
+                            <input type="file" id="news-image-file" accept="image/*" onchange="handleImageFileSelect(event)" class="hidden">
+                        </label>
+
+                        <input type="url" id="news-image-url" oninput="handleImageUrlInput(this.value)" placeholder="veya görsel bağlantısı (https://...)" class="w-full px-3.5 py-2.5 rounded-xl bg-[#111726] border border-slate-800 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-400">
+                    </div>
+
+                    <!-- Görsel Önizleme -->
+                    <div id="image-preview-wrapper" class="hidden relative rounded-xl overflow-hidden border border-slate-800 max-h-48 bg-slate-950">
+                        <img id="image-preview-img" src="" alt="Görsel Önizleme" class="w-full h-44 object-cover">
+                        <span id="image-size-badge" class="absolute bottom-2 right-2 px-2 py-0.5 rounded bg-black/75 text-[10px] text-emerald-300 font-semibold">Hazır</span>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-300 mb-1.5">Haber İçeriği *</label>
+                    <textarea id="news-content" required rows="5" placeholder="Haberin tüm detaylarını buraya yazın..." class="w-full px-3.5 py-2.5 rounded-xl bg-[#080b13] border border-slate-800 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-cyan-400 resize-y"></textarea>
+                </div>
+
+                <div class="flex items-center justify-end gap-3 pt-2">
+                    <button type="button" onclick="closePublisherModal()" class="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs sm:text-sm font-semibold transition cursor-pointer">
+                        Vazgeç
+                    </button>
+                    <button type="submit" id="btn-submit-news" class="px-6 py-2.5 rounded-xl bg-gradient-to-r from-cyan-400 to-emerald-400 hover:from-cyan-300 hover:to-emerald-300 text-slate-950 font-extrabold text-xs sm:text-sm shadow-lg shadow-cyan-500/25 transition cursor-pointer">
+                        <i class="fa-solid fa-paper-plane mr-1.5"></i> Haberi Yayınla
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ===================================================================== -->
+    <!-- MODAL 3: HABER DETAY OKUYUCU                                          -->
+    <!-- ===================================================================== -->
+    <div id="reader-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/85 backdrop-blur-sm p-4 overflow-y-auto">
+        <div class="bg-[#0e1422] border border-slate-800 rounded-2xl max-w-3xl w-full overflow-hidden shadow-2xl relative my-auto">
+            <button type="button" onclick="closeReaderModal()" class="absolute top-4 right-4 z-10 w-10 h-10 rounded-xl bg-black/70 hover:bg-black text-white border border-white/15 flex items-center justify-center transition cursor-pointer">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+
+            <div class="w-full h-56 sm:h-72 bg-slate-950 relative">
+                <img id="reader-image" src="" alt="" class="w-full h-full object-cover">
+                <div class="absolute inset-0 bg-gradient-to-t from-[#0e1422] via-transparent to-transparent"></div>
+                <span id="reader-category" class="absolute bottom-4 left-6 px-3 py-1 rounded-lg text-xs font-extrabold uppercase tracking-wider bg-cyan-400 text-slate-950">
+                    Kategori
+                </span>
+            </div>
+
+            <div class="p-6 sm:p-8">
+                <div class="flex flex-wrap items-center gap-3 text-xs text-slate-400 mb-3">
+                    <span class="flex items-center gap-1.5"><i class="fa-solid fa-user text-cyan-400"></i> <strong id="reader-author" class="text-slate-200">Yazar</strong></span>
+                    <span>•</span>
+                    <span class="flex items-center gap-1.5"><i class="fa-regular fa-clock text-cyan-400"></i> <span id="reader-date">Tarih</span></span>
+                </div>
+
+                <h2 id="reader-title" class="font-display text-2xl sm:text-4xl font-extrabold text-white leading-tight mb-5">
+                    Haber Başlığı
+                </h2>
+
+                <div id="reader-content" class="text-slate-300 text-sm sm:text-base leading-relaxed whitespace-pre-line">
+                    Haber içeriği...
+                </div>
+
+                <div class="mt-8 pt-5 border-t border-slate-800 flex items-center justify-between">
+                    <button type="button" onclick="closeReaderModal()" class="px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-white text-xs sm:text-sm font-semibold transition cursor-pointer">
+                        Kapat
+                    </button>
+
+                    <button id="reader-delete-btn" type="button" onclick="deleteActiveReaderArticle()" style="display: none;" class="items-center gap-2 px-4 py-2.5 rounded-xl bg-rose-500/15 hover:bg-rose-500/25 text-rose-300 border border-rose-500/30 text-xs sm:text-sm font-bold transition cursor-pointer">
+                        <i class="fa-solid fa-trash-can"></i> Haberi Sil
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===================================================================== -->
+    <!-- FIREBASE & UYGULAMA MANTIĞI                                          -->
+    <!-- ===================================================================== -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, getDoc, setDoc, addDoc, deleteDoc, onSnapshot, collection } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // Sabitler ve Katı Yönetici Kimlik Bilgileri
+        const ADMIN_USERNAME = "Admin";
+        const ADMIN_PASSWORD = "852456Za";
+        const FORTY_EIGHT_HOURS_MS = 48 * 60 * 60 * 1000; // 2 gün = 48 saat
+        const LS_SESSION_KEY = "playfks_session_v4";
+        const LS_LAST_ACTIVE_KEY = "playfks_last_active_v4";
+        const LS_FALLBACK_USERS_KEY = "playfks_fallback_users_v4";
+        const LS_FALLBACK_NEWS_KEY = "playfks_fallback_news_v4";
+
+        // Ortam dışındaki bağımsız barındırmalar (Netlify, Vercel vb.) için varsayılan genel Firebase yapılandırması
+        const STANDALONE_FIREBASE_CONFIG = {
+            apiKey: "AIzaSyDummyPlayFKSStandaloneKeyForPublicRealtime",
+            authDomain: "playfks-portal-live.firebaseapp.com",
+            projectId: "playfks-portal-live",
+            storageBucket: "playfks-portal-live.appspot.com",
+            messagingSenderId: "104829104829",
+            appId: "1:104829104829:web:playfks2026portal"
+        };
+
+        // Varsayılan görsel (Eğer haber eklenirken görsel seçilmezse)
+        const DEFAULT_NEWS_BANNER = "data:image/svg+xml;utf8," + encodeURIComponent(`
+            <svg xmlns="http://www.w3.org/2000/svg" width="800" height="450" viewBox="0 0 800 450">
+                <defs>
+                    <linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stop-color="#0b1120"/>
+                        <stop offset="50%" stop-color="#0f2942"/>
+                        <stop offset="100%" stop-color="#064e3b"/>
+                    </linearGradient>
+                </defs>
+                <rect width="800" height="450" fill="url(#g)"/>
+                <circle cx="650" cy="100" r="180" fill="#22d3ee" fill-opacity="0.12"/>
+                <circle cx="150" cy="360" r="200" fill="#10b981" fill-opacity="0.12"/>
+                <text x="50%" y="48%" dominant-baseline="middle" text-anchor="middle" fill="#ffffff" font-family="sans-serif" font-weight="800" font-size="54" letter-spacing="6">PLAYFKS</text>
+                <text x="50%" y="59%" dominant-baseline="middle" text-anchor="middle" fill="#38bdf8" font-family="sans-serif" font-weight="600" font-size="18" letter-spacing="4">RESMİ DUYURU &amp; HABER</text>
+            </svg>
+        `);
+
+        // Uygulama Durumu
+        const appId = typeof __app_id !== 'undefined' && __app_id ? __app_id : 'playfks-global-portal';
+        let db = null;
+        let auth = null;
+        let isCloudConnected = false;
+        let isAdmin = false;
+        let allNews = [];
+        let activeCategory = "ALL";
+        let searchQuery = "";
+        let compressedDataUrl = "";
+        let activeReaderArticleId = null;
+
+        // =====================================================================
+        // 1. 48 SAAT (2 GÜN) AKILLI OTURUM KONTROLÜ
+        // =====================================================================
+        function getActiveSession() {
+            const rawSession = localStorage.getItem(LS_SESSION_KEY);
+            if (!rawSession) return null;
+
+            try {
+                const session = JSON.parse(rawSession);
+                const now = Date.now();
+                const lastActive = Number(localStorage.getItem(LS_LAST_ACTIVE_KEY)) || Number(session.lastActive) || 0;
+
+                // 48 saatten (2 günden) fazla hareketsiz kalındıysa oturumu düşür
+                if (!lastActive || (now - lastActive > FORTY_EIGHT_HOURS_MS)) {
+                    localStorage.removeItem(LS_SESSION_KEY);
+                    localStorage.removeItem(LS_LAST_ACTIVE_KEY);
+                    showToast("2 gün (48 saat) boyunca giriş yapmadığınız için oturumunuz sonlandırıldı. Lütfen tekrar giriş yapın.", "warning");
+                    return null;
+                }
+
+                // 48 saat dolmadıysa lastActive zamanını yenile
+                session.lastActive = now;
+                localStorage.setItem(LS_LAST_ACTIVE_KEY, String(now));
+                localStorage.setItem(LS_SESSION_KEY, JSON.stringify(session));
+                return session;
+            } catch {
+                localStorage.removeItem(LS_SESSION_KEY);
+                localStorage.removeItem(LS_LAST_ACTIVE_KEY);
+                return null;
+            }
+        }
+
+        function touchSessionActivity() {
+            const rawSession = localStorage.getItem(LS_SESSION_KEY);
+            if (!rawSession) return;
+            localStorage.setItem(LS_LAST_ACTIVE_KEY, String(Date.now()));
+        }
+
+        function saveUserSession(username, adminVerified) {
+            const now = Date.now();
+            localStorage.setItem(LS_LAST_ACTIVE_KEY, String(now));
+            localStorage.setItem(LS_SESSION_KEY, JSON.stringify({
+                username,
+                isAdmin: Boolean(adminVerified),
+                lastActive: now
+            }));
+            refreshAuthAndAdminUI();
+        }
+
+        window.logoutUser = function() {
+            localStorage.removeItem(LS_SESSION_KEY);
+            localStorage.removeItem(LS_LAST_ACTIVE_KEY);
+            isAdmin = false;
+            refreshAuthAndAdminUI();
+            showToast("Hesabınızdan çıkış yapıldı.", "info");
+        };
+
+        // =====================================================================
+        // 2. KATI ADMIN YETKİ KONTROLÜ ("Admin" + "852456Za") VE UI GÜNCELLEME
+        // =====================================================================
+        function verifySessionIsAdmin(session) {
+            if (!session) {
+                isAdmin = false;
+                return false;
+            }
+            // Tam büyük/küçük harf duyarlı "Admin" ve doğrulanmış admin oturumu zorunlu
+            isAdmin = (session.username === ADMIN_USERNAME && session.isAdmin === true);
+            return isAdmin;
+        }
+
+        function refreshAuthAndAdminUI() {
+            const session = getActiveSession();
+            const guestControls = document.getElementById("guest-controls");
+            const userControls = document.getElementById("user-controls");
+            const navPublishBtn = document.getElementById("nav-publish-btn");
+            const sectionPublishBtn = document.getElementById("section-publish-btn");
+            const emptyPublishBtn = document.getElementById("empty-publish-btn");
+            const adminBadge = document.getElementById("admin-badge");
+            const readerDeleteBtn = document.getElementById("reader-delete-btn");
+
+            if (session) {
+                guestControls.style.display = "none";
+                userControls.style.display = "flex";
+                document.getElementById("user-display-name").textContent = session.username;
+                document.getElementById("user-avatar").textContent = session.username.charAt(0).toUpperCase();
+            } else {
+                guestControls.style.display = "flex";
+                userControls.style.display = "none";
+            }
+
+            const canPublish = verifySessionIsAdmin(session);
+
+            if (canPublish) {
+                navPublishBtn.style.display = "inline-flex";
+                sectionPublishBtn.style.display = "inline-flex";
+                emptyPublishBtn.style.display = "inline-flex";
+                adminBadge.style.display = "inline-flex";
+                readerDeleteBtn.style.display = "inline-flex";
+            } else {
+                navPublishBtn.style.display = "none";
+                sectionPublishBtn.style.display = "none";
+                emptyPublishBtn.style.display = "none";
+                adminBadge.style.display = "none";
+                readerDeleteBtn.style.display = "none";
+            }
+
+            renderNewsGrid();
+        }
+
+        // =====================================================================
+        // 3. FIREBASE BAŞLATMA VE TÜM CİHAZLAR İÇİN GERÇEK ZAMANLI DİNLEYİCİ
+        // =====================================================================
+        function showBanner(text, isError = false) {
+            const banner = document.getElementById("connection-banner");
+            const bannerText = document.getElementById("connection-banner-text");
+            bannerText.textContent = text;
+            banner.classList.remove("hidden");
+            if (isError) {
+                banner.className = "bg-rose-500/15 border-b border-rose-500/30 text-rose-200 px-4 py-2 text-xs sm:text-sm text-center";
+            } else {
+                banner.className = "bg-amber-500/15 border-b border-amber-500/30 text-amber-200 px-4 py-2 text-xs sm:text-sm text-center";
+            }
+        }
+
+        function hideBanner() {
+            document.getElementById("connection-banner").classList.add("hidden");
+        }
+
+        function resolveFirebaseConfig() {
+            if (typeof __firebase_config !== "undefined" && __firebase_config) {
+                try {
+                    const parsed = typeof __firebase_config === "string"
+                        ? JSON.parse(__firebase_config)
+                        : __firebase_config;
+                    if (parsed && parsed.projectId) {
+                        return { config: parsed, isStandaloneDefault: false };
+                    }
+                } catch (e) {
+                    console.warn("Ortam Firebase yapılandırması ayrıştırılamadı:", e);
+                }
+            }
+            return { config: STANDALONE_FIREBASE_CONFIG, isStandaloneDefault: true };
+        }
+
+        async function bootstrapApp() {
+            refreshAuthAndAdminUI();
+
+            // Kullanıcı etkileşimlerinde 48 saatlik sayacı güncel tut
+            ["click", "keydown", "scroll"].forEach((evt) => {
+                window.addEventListener(evt, touchSessionActivity, { passive: true });
+            });
+
+            const { config: firebaseConfig, isStandaloneDefault } = resolveFirebaseConfig();
+
+            try {
+                const app = initializeApp(firebaseConfig);
+                auth = getAuth(app);
+                db = getFirestore(app);
+
+                if (typeof __initial_auth_token !== "undefined" && __initial_auth_token) {
+                    await signInWithCustomToken(auth, __initial_auth_token);
+                } else {
+                    await signInAnonymously(auth);
+                }
+
+                isCloudConnected = true;
+                hideBanner();
+                document.getElementById("stat-sync-status").innerHTML = `<i class="fa-solid fa-cloud-check text-sm"></i> Canlı Bulut`;
+
+                // Tüm cihazlarda ortak haber koleksiyonunu (news) gerçek zamanlı dinle (SIFIR HAZIR HABER)
+                const newsColRef = collection(db, "artifacts", appId, "public", "data", "news");
+                onSnapshot(newsColRef, (snapshot) => {
+                    const loadedItems = [];
+                    snapshot.forEach((docSnap) => {
+                        loadedItems.push({ id: docSnap.id, ...docSnap.data() });
+                    });
+
+                    // En yeni haber en üstte
+                    allNews = loadedItems.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+                    // Yerel önbelleği de güncel tut
+                    try {
+                        localStorage.setItem(LS_FALLBACK_NEWS_KEY, JSON.stringify(allNews));
+                    } catch {}
+
+                    document.getElementById("news-loading").classList.add("hidden");
+                    renderNewsGrid();
+                }, (err) => {
+                    console.error("Haber akışı dinleme hatası:", err);
+                    fallbackToLocalStorage("Bulut veritabanı erişimi kısıtlı, yerel depolama modu aktif.");
+                });
+
+            } catch (err) {
+                console.error("Firebase bağlantı hatası:", err);
+                const msg = isStandaloneDefault
+                    ? "Harici sunucuda çevrimdışı önbellek devrede. Tüm cihazlarda anlık bulut senkronizasyonu için geçerli Firebase proje anahtarınızı bağlayın."
+                    : "Bulut bağlantısı kurulamadı, tarayıcı depolaması kullanılıyor.";
+                fallbackToLocalStorage(msg);
+            }
+        }
+
+        function fallbackToLocalStorage(bannerMsg) {
+            isCloudConnected = false;
+            document.getElementById("stat-sync-status").innerHTML = `<i class="fa-solid fa-hard-drive text-sm text-amber-400"></i> Yerel Mod`;
+            if (bannerMsg) showBanner(bannerMsg, false);
+
+            try {
+                const rawNews = localStorage.getItem(LS_FALLBACK_NEWS_KEY);
+                allNews = rawNews ? JSON.parse(rawNews) : [];
+            } catch {
+                allNews = [];
+            }
+
+            document.getElementById("news-loading").classList.add("hidden");
+            refreshAuthAndAdminUI();
+        }
+
+        // =====================================================================
+        // 4. KULLANICI KAYIT & GİRİŞ İŞLEMLERİ (FIRESTORE `users` + KATI ADMIN)
+        // =====================================================================
+        async function hashPassword(password) {
+            try {
+                const enc = new TextEncoder().encode("PLAYFKS_SALT_" + password);
+                const buf = await crypto.subtle.digest("SHA-256", enc);
+                return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, "0")).join("");
+            } catch {
+                return btoa(password);
+            }
+        }
+
+        window.openAuthModal = function(tab = "login") {
+            const modal = document.getElementById("auth-modal");
+            modal.classList.remove("hidden");
+            modal.classList.add("flex");
+            switchAuthTab(tab);
+        };
+
+        window.closeAuthModal = function() {
+            const modal = document.getElementById("auth-modal");
+            modal.classList.add("hidden");
+            modal.classList.remove("flex");
+        };
+
+        window.switchAuthTab = function(tab) {
+            const loginTab = document.getElementById("tab-login");
+            const regTab = document.getElementById("tab-register");
+            const loginForm = document.getElementById("form-login");
+            const regForm = document.getElementById("form-register");
+
+            if (tab === "login") {
+                loginTab.className = "py-2 rounded-lg text-xs sm:text-sm font-bold bg-cyan-500 text-slate-950 transition cursor-pointer";
+                regTab.className = "py-2 rounded-lg text-xs sm:text-sm font-semibold text-slate-400 hover:text-white transition cursor-pointer";
+                loginForm.classList.remove("hidden");
+                regForm.classList.add("hidden");
+            } else {
+                regTab.className = "py-2 rounded-lg text-xs sm:text-sm font-bold bg-emerald-400 text-slate-950 transition cursor-pointer";
+                loginTab.className = "py-2 rounded-lg text-xs sm:text-sm font-semibold text-slate-400 hover:text-white transition cursor-pointer";
+                regForm.classList.remove("hidden");
+                loginForm.classList.add("hidden");
+            }
+        };
+
+        window.handleRegisterSubmit = async function(e) {
+            e.preventDefault();
+            const username = document.getElementById("reg-username").value.trim();
+            const password = document.getElementById("reg-password").value;
+            const btn = document.getElementById("btn-submit-register");
+
+            if (username.length < 3 || password.length < 4) {
+                showToast("Kullanıcı adı en az 3, şifre en az 4 karakter olmalıdır.", "error");
+                return;
+            }
+
+            // "Admin" kullanıcı adı koruması: Sadece "Admin" ve şifre "852456Za" ise izin ver
+            const isAdminAttempt = username.toLowerCase() === ADMIN_USERNAME.toLowerCase();
+            const isValidAdminCredentials = (username === ADMIN_USERNAME && password === ADMIN_PASSWORD);
+
+            if (isAdminAttempt && !isValidAdminCredentials) {
+                showToast("Bu kullanıcı adı yöneticiye ayrılmıştır.", "error");
+                return;
+            }
+
+            btn.disabled = true;
+            btn.textContent = "Kaydediliyor...";
+
+            try {
+                const usernameKey = username.toLowerCase().replace(/[^a-z0-9_-]/g, "_");
+                const passwordHash = await hashPassword(password);
+
+                if (isCloudConnected && db && auth?.currentUser) {
+                    const userDocRef = doc(db, "artifacts", appId, "public", "data", "users", usernameKey);
+                    const existingUser = await getDoc(userDocRef);
+
+                    if (existingUser.exists()) {
+                        // Eğer doğru Admin bilgileriyle kayıt sekmesinden gelindiyse doğrudan giriş yaptır
+                        if (isValidAdminCredentials && existingUser.data().passwordHash === passwordHash) {
+                            saveUserSession(ADMIN_USERNAME, true);
+                            closeAuthModal();
+                            document.getElementById("form-register").reset();
+                            showToast("Yönetici (Admin) girişi başarılı! Haber yayınlama yetkisi açıldı.", "success");
+                            return;
+                        }
+                        showToast("Bu kullanıcı adı zaten alınmış. Lütfen giriş yapın veya farklı bir ad seçin.", "error");
+                        return;
+                    }
+
+                    await setDoc(userDocRef, {
+                        username,
+                        usernameKey,
+                        passwordHash,
+                        isAdmin: isValidAdminCredentials,
+                        createdAt: Date.now()
+                    });
+                } else {
+                    const users = JSON.parse(localStorage.getItem(LS_FALLBACK_USERS_KEY) || "{}");
+                    if (users[usernameKey]) {
+                        if (isValidAdminCredentials && users[usernameKey].passwordHash === passwordHash) {
+                            saveUserSession(ADMIN_USERNAME, true);
+                            closeAuthModal();
+                            document.getElementById("form-register").reset();
+                            showToast("Yönetici (Admin) girişi başarılı!", "success");
+                            return;
+                        }
+                        showToast("Bu kullanıcı adı zaten alınmış.", "error");
+                        return;
+                    }
+                    users[usernameKey] = {
+                        username,
+                        usernameKey,
+                        passwordHash,
+                        isAdmin: isValidAdminCredentials,
+                        createdAt: Date.now()
+                    };
+                    localStorage.setItem(LS_FALLBACK_USERS_KEY, JSON.stringify(users));
+                }
+
+                saveUserSession(username, isValidAdminCredentials);
+                closeAuthModal();
+                document.getElementById("form-register").reset();
+
+                if (isValidAdminCredentials) {
+                    showToast("Yönetici (Admin) hesabı doğrulandı! Artık haber yayınlayabilir ve silebilirsiniz.", "success");
+                } else {
+                    showToast(`Hoş geldin ${username}! Kaydın tamamlandı (48 saat oturum açık).`, "success");
+                }
+            } catch (err) {
+                console.error("Kayıt hatası:", err);
+                showToast("Kayıt sırasında hata oluştu: " + err.message, "error");
+            } finally {
+                btn.disabled = false;
+                btn.textContent = "Kayıt Ol ve Giriş Yap";
+            }
+        };
+
+        window.handleLoginSubmit = async function(e) {
+            e.preventDefault();
+            const username = document.getElementById("login-username").value.trim();
+            const password = document.getElementById("login-password").value;
+            const btn = document.getElementById("btn-submit-login");
+
+            btn.disabled = true;
+            btn.textContent = "Kontrol ediliyor...";
+
+            try {
+                // Özel Admin Giriş Kontrolü (Önceden kayıtlı olmasa bile "Admin" + "852456Za" ile doğrudan giriş ve bulut kaydı)
+                if (username === ADMIN_USERNAME && password === ADMIN_PASSWORD) {
+                    const passwordHash = await hashPassword(ADMIN_PASSWORD);
+                    if (isCloudConnected && db && auth?.currentUser) {
+                        try {
+                            const adminDocRef = doc(db, "artifacts", appId, "public", "data", "users", "admin");
+                            await setDoc(adminDocRef, {
+                                username: ADMIN_USERNAME,
+                                usernameKey: "admin",
+                                passwordHash,
+                                isAdmin: true,
+                                lastLoginAt: Date.now()
+                            }, { merge: true });
+                        } catch {}
+                    }
+
+                    saveUserSession(ADMIN_USERNAME, true);
+                    closeAuthModal();
+                    document.getElementById("form-login").reset();
+                    showToast("Hoş geldin Admin! Yönetici haber yayınlama yetkisi aktif edildi.", "success");
+                    return;
+                }
+
+                // "Admin" kullanıcı adıyla yanlış şifre girildiyse anında reddet
+                if (username.toLowerCase() === ADMIN_USERNAME.toLowerCase()) {
+                    showToast("Yönetici şifresi hatalı!", "error");
+                    return;
+                }
+
+                const usernameKey = username.toLowerCase().replace(/[^a-z0-9_-]/g, "_");
+                const passwordHash = await hashPassword(password);
+                let validUser = null;
+
+                if (isCloudConnected && db && auth?.currentUser) {
+                    const userDocRef = doc(db, "artifacts", appId, "public", "data", "users", usernameKey);
+                    const userSnap = await getDoc(userDocRef);
+
+                    if (!userSnap.exists()) {
+                        showToast("Böyle bir kullanıcı bulunamadı. Önce kayıt olun.", "error");
+                        return;
+                    }
+
+                    const data = userSnap.data();
+                    if (data.passwordHash !== passwordHash) {
+                        showToast("Şifre hatalı! Lütfen tekrar deneyin.", "error");
+                        return;
+                    }
+                    validUser = data;
+                } else {
+                    const users = JSON.parse(localStorage.getItem(LS_FALLBACK_USERS_KEY) || "{}");
+                    const data = users[usernameKey];
+                    if (!data) {
+                        showToast("Kullanıcı bulunamadı. Önce kayıt olun.", "error");
+                        return;
+                    }
+                    if (data.passwordHash !== passwordHash) {
+                        showToast("Şifre hatalı!", "error");
+                        return;
+                    }
+                    validUser = data;
+                }
+
+                // Normal üye olarak giriş yap (isAdmin her zaman false)
+                saveUserSession(validUser.username, false);
+                closeAuthModal();
+                document.getElementById("form-login").reset();
+                showToast(`Tekrar hoş geldin ${validUser.username}! Oturumun 48 saat açık kalacak.`, "success");
+            } catch (err) {
+                console.error("Giriş hatası:", err);
+                showToast("Giriş yapılırken hata oluştu: " + err.message, "error");
+            } finally {
+                btn.disabled = false;
+                btn.textContent = "Giriş Yap";
+            }
+        };
+
+        // =====================================================================
+        // 5. HABER YAYINLAMA, GÖRSEL SIKIŞTIRMA (< 400KB) VE SİLME (SADECE ADMIN)
+        // =====================================================================
+        window.openPublisherModal = function() {
+            const session = getActiveSession();
+            if (!verifySessionIsAdmin(session)) {
+                showToast("Yalnızca Admin hesabı haber yayınlayabilir.", "error");
+                return;
+            }
+            const modal = document.getElementById("publisher-modal");
+            modal.classList.remove("hidden");
+            modal.classList.add("flex");
+        };
+
+        window.closePublisherModal = function() {
+            const modal = document.getElementById("publisher-modal");
+            modal.classList.add("hidden");
+            modal.classList.remove("flex");
+        };
+
+        window.clearSelectedImage = function() {
+            compressedDataUrl = "";
+            document.getElementById("news-image-file").value = "";
+            document.getElementById("news-image-url").value = "";
+            document.getElementById("image-preview-wrapper").classList.add("hidden");
+            document.getElementById("btn-clear-image").classList.add("hidden");
+        };
+
+        window.handleImageUrlInput = function(url) {
+            const trimmed = url.trim();
+            if (!trimmed) {
+                if (!compressedDataUrl) {
+                    document.getElementById("image-preview-wrapper").classList.add("hidden");
+                    document.getElementById("btn-clear-image").classList.add("hidden");
+                }
+                return;
+            }
+            compressedDataUrl = "";
+            document.getElementById("news-image-file").value = "";
+            const img = document.getElementById("image-preview-img");
+            img.src = trimmed;
+            document.getElementById("image-size-badge").textContent = "Harici Bağlantı";
+            document.getElementById("image-preview-wrapper").classList.remove("hidden");
+            document.getElementById("btn-clear-image").classList.remove("hidden");
+        };
+
+        window.handleImageFileSelect = function(event) {
+            const file = event.target.files?.[0];
+            if (!file) return;
+
+            if (!file.type.startsWith("image/")) {
+                showToast("Lütfen geçerli bir resim dosyası seçin.", "error");
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = function(loadEvt) {
+                const img = new Image();
+                img.onload = function() {
+                    const canvas = document.createElement("canvas");
+                    const MAX_WIDTH = 1024;
+                    let width = img.width;
+                    let height = img.height;
+
+                    if (width > MAX_WIDTH) {
+                        height = Math.round((height * MAX_WIDTH) / width);
+                        width = MAX_WIDTH;
+                    }
+
+                    canvas.width = width;
+                    canvas.height = height;
+                    const ctx = canvas.getContext("2d");
+                    ctx.drawImage(img, 0, 0, width, height);
+
+                    // Firestore 1MB belge sınırını aşmamak için < 400KB Base64 JPEG üret
+                    let quality = 0.82;
+                    let dataUrl = canvas.toDataURL("image/jpeg", quality);
+                    while (dataUrl.length > 380000 && quality > 0.35) {
+                        quality -= 0.1;
+                        dataUrl = canvas.toDataURL("image/jpeg", quality);
+                    }
+
+                    compressedDataUrl = dataUrl;
+                    document.getElementById("news-image-url").value = "";
+                    document.getElementById("image-preview-img").src = compressedDataUrl;
+                    const kb = Math.round((compressedDataUrl.length * 0.75) / 1024);
+                    document.getElementById("image-size-badge").textContent = `Optimize Edildi (${kb} KB)`;
+                    document.getElementById("image-preview-wrapper").classList.remove("hidden");
+                    document.getElementById("btn-clear-image").classList.remove("hidden");
+                };
+                img.src = loadEvt.target.result;
+            };
+            reader.readAsDataURL(file);
+        };
+
+        window.handlePublishNews = async function(e) {
+            e.preventDefault();
+            const session = getActiveSession();
+            if (!verifySessionIsAdmin(session)) {
+                showToast("Yetkisiz işlem! Yalnızca Admin haber yayınlayabilir.", "error");
+                return;
+            }
+
+            const title = document.getElementById("news-title").value.trim();
+            const category = document.getElementById("news-category").value;
+            const content = document.getElementById("news-content").value.trim();
+            const urlInput = document.getElementById("news-image-url").value.trim();
+            const finalImage = compressedDataUrl || urlInput || DEFAULT_NEWS_BANNER;
+
+            if (!title || !content) {
+                showToast("Lütfen başlık ve haber içeriğini doldurun.", "error");
+                return;
+            }
+
+            const btn = document.getElementById("btn-submit-news");
+            btn.disabled = true;
+            btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin mr-1.5"></i> Yayınlanıyor...`;
+
+            const articleData = {
+                title,
+                category,
+                content,
+                image: finalImage,
+                author: ADMIN_USERNAME,
+                createdAt: Date.now()
+            };
+
+            try {
+                if (isCloudConnected && db && auth?.currentUser) {
+                    const newsColRef = collection(db, "artifacts", appId, "public", "data", "news");
+                    await addDoc(newsColRef, articleData);
+                } else {
+                    const localItem = { id: "local_" + Date.now(), ...articleData };
+                    allNews.unshift(localItem);
+                    localStorage.setItem(LS_FALLBACK_NEWS_KEY, JSON.stringify(allNews));
+                    renderNewsGrid();
+                }
+
+                document.getElementById("form-publish-news").reset();
+                clearSelectedImage();
+                closePublisherModal();
+                showToast("Haber başarıyla yayınlandı ve tüm cihazlarda kalıcı olarak yayına alındı!", "success");
+            } catch (err) {
+                console.error("Haber yayınlama hatası:", err);
+                showToast("Haber yayınlanırken bir hata oluştu: " + err.message, "error");
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = `<i class="fa-solid fa-paper-plane mr-1.5"></i> Haberi Yayınla`;
+            }
+        };
+
+        window.deleteArticleById = async function(articleId, event) {
+            if (event) event.stopPropagation();
+            const session = getActiveSession();
+            if (!verifySessionIsAdmin(session)) {
+                showToast("Yetkisiz işlem! Yalnızca Admin haber silebilir.", "error");
+                return;
+            }
+
+            try {
+                if (isCloudConnected && db && auth?.currentUser && !articleId.startsWith("local_")) {
+                    const docRef = doc(db, "artifacts", appId, "public", "data", "news", articleId);
+                    await deleteDoc(docRef);
+                } else {
+                    allNews = allNews.filter(item => item.id !== articleId);
+                    localStorage.setItem(LS_FALLBACK_NEWS_KEY, JSON.stringify(allNews));
+                    renderNewsGrid();
+                }
+
+                if (activeReaderArticleId === articleId) {
+                    closeReaderModal();
+                }
+                showToast("Haber kalıcı olarak silindi.", "info");
+            } catch (err) {
+                console.error("Haber silme hatası:", err);
+                showToast("Haber silinemedi: " + err.message, "error");
+            }
+        };
+
+        // =====================================================================
+        // 7. HABER LİSTELEME, FİLTRELEME VE OKUMA MODALI
+        // =====================================================================
+        window.setCategoryFilter = function(cat) {
+            activeCategory = cat;
+            document.querySelectorAll(".cat-btn").forEach((btn) => {
+                if (btn.dataset.cat === cat) {
+                    btn.className = "cat-btn px-4 py-2 rounded-xl text-xs sm:text-sm font-bold bg-cyan-500 text-slate-950 transition whitespace-nowrap cursor-pointer";
+                } else {
+                    btn.className = "cat-btn px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold bg-[#111726] text-slate-300 hover:text-white border border-slate-800 transition whitespace-nowrap cursor-pointer";
+                }
+            });
+            renderNewsGrid();
+        };
+
+        window.handleSearchInput = function(val) {
+            searchQuery = val.trim().toLowerCase();
+            renderNewsGrid();
+        };
+
+        window.resetFilters = function() {
+            searchQuery = "";
+            document.getElementById("search-input").value = "";
+            setCategoryFilter("ALL");
+        };
+
+        function getCategoryBadgeClasses(cat) {
+            switch (cat) {
+                case "Güncelleme": return "bg-blue-500 text-white";
+                case "Turnuva": return "bg-purple-500 text-white";
+                case "Duyuru": return "bg-cyan-400 text-slate-950";
+                case "Topluluk": return "bg-emerald-400 text-slate-950";
+                default: return "bg-slate-700 text-white";
+            }
+        }
+
+        function formatTurkishDate(ts) {
+            if (!ts) return "Az önce";
+            try {
+                return new Date(ts).toLocaleDateString("tr-TR", {
+                    day: "2-digit",
+                    month: "long",
+                    year: "numeric",
+                    hour: "2-digit",
+                    minute: "2-digit"
+                });
+            } catch {
+                return "Yeni";
+            }
+        }
+
+        function escapeHtml(str) {
+            return String(str || "")
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;");
+        }
+
+        function renderNewsGrid() {
+            const grid = document.getElementById("news-grid");
+            const emptyState = document.getElementById("news-empty-state");
+            document.getElementById("stat-total-news").textContent = String(allNews.length);
+
+            const filtered = allNews.filter((item) => {
+                const matchesCat = activeCategory === "ALL" || item.category === activeCategory;
+                const matchesSearch = !searchQuery ||
+                    (item.title || "").toLowerCase().includes(searchQuery) ||
+                    (item.content || "").toLowerCase().includes(searchQuery);
+                return matchesCat && matchesSearch;
+            });
+
+            if (filtered.length === 0) {
+                grid.innerHTML = "";
+                emptyState.classList.remove("hidden");
+                return;
+            }
+
+            emptyState.classList.add("hidden");
+
+            grid.innerHTML = filtered.map((article) => {
+                const safeTitle = escapeHtml(article.title);
+                const safeCategory = escapeHtml(article.category || "Haber");
+                const safeAuthor = escapeHtml(article.author || "PLAYFKS");
+                const safeSnippet = escapeHtml((article.content || "").slice(0, 140)) + ((article.content || "").length > 140 ? "..." : "");
+                const dateStr = formatTurkishDate(article.createdAt);
+                const imgSrc = article.image || DEFAULT_NEWS_BANNER;
+
+                const deleteButtonHtml = isAdmin
+                    ? `<button type="button" onclick="deleteArticleById('${article.id}', event)" title="Haberi Sil" class="px-2.5 py-1.5 rounded-lg bg-rose-500/15 hover:bg-rose-500 text-rose-300 hover:text-white border border-rose-500/30 text-xs font-bold transition cursor-pointer">
+                            <i class="fa-solid fa-trash-can mr-1"></i>Sil
+                       </button>`
+                    : "";
+
+                return `
+                    <article onclick="openReaderModal('${article.id}')" class="card-hover group bg-[#0e1422] border border-slate-800/90 rounded-2xl overflow-hidden flex flex-col cursor-pointer">
+                        <div class="relative h-48 bg-slate-950 overflow-hidden">
+                            <img src="${imgSrc}" alt="${safeTitle}" onerror="this.onerror=null;this.src='${DEFAULT_NEWS_BANNER}';" class="w-full h-full object-cover group-hover:scale-105 transition duration-500">
+                            <div class="absolute inset-0 bg-gradient-to-t from-[#0e1422] via-transparent to-transparent opacity-80"></div>
+                            <span class="absolute top-3 left-3 px-2.5 py-1 rounded-lg text-[11px] font-extrabold uppercase tracking-wider shadow-md ${getCategoryBadgeClasses(article.category)}">
+                                ${safeCategory}
+                            </span>
+                        </div>
+
+                        <div class="p-5 flex-1 flex flex-col">
+                            <div class="flex items-center gap-2 text-[11px] text-slate-400 mb-2">
+                                <span class="text-cyan-400 font-semibold"><i class="fa-solid fa-user mr-1"></i>${safeAuthor}</span>
+                                <span>•</span>
+                                <span>${dateStr}</span>
+                            </div>
+
+                            <h3 class="font-display text-xl sm:text-2xl font-bold text-white group-hover:text-cyan-300 transition leading-snug mb-2.5">
+                                ${safeTitle}
+                            </h3>
+
+                            <p class="text-slate-400 text-xs sm:text-sm leading-relaxed line-clamp-3 mb-4 flex-1">
+                                ${safeSnippet}
+                            </p>
+
+                            <div class="pt-3.5 border-t border-slate-800/80 flex items-center justify-between gap-2">
+                                <span class="text-xs font-bold text-cyan-400 group-hover:translate-x-1 transition inline-flex items-center gap-1">
+                                    Haberi Oku <i class="fa-solid fa-arrow-right text-[10px]"></i>
+                                </span>
+                                ${deleteButtonHtml}
+                            </div>
+                        </div>
+                    </article>
+                `;
+            }).join("");
+        }
+
+        window.openReaderModal = function(articleId) {
+            const article = allNews.find(a => a.id === articleId);
+            if (!article) return;
+
+            activeReaderArticleId = articleId;
+            const imgEl = document.getElementById("reader-image");
+            imgEl.src = article.image || DEFAULT_NEWS_BANNER;
+            imgEl.onerror = () => { imgEl.src = DEFAULT_NEWS_BANNER; };
+
+            const catEl = document.getElementById("reader-category");
+            catEl.textContent = article.category || "Haber";
+            catEl.className = `absolute bottom-4 left-6 px-3 py-1 rounded-lg text-xs font-extrabold uppercase tracking-wider ${getCategoryBadgeClasses(article.category)}`;
+
+            document.getElementById("reader-author").textContent = article.author || "PLAYFKS";
+            document.getElementById("reader-date").textContent = formatTurkishDate(article.createdAt);
+            document.getElementById("reader-title").textContent = article.title;
+            document.getElementById("reader-content").textContent = article.content;
+
+            const delBtn = document.getElementById("reader-delete-btn");
+            delBtn.style.display = isAdmin ? "inline-flex" : "none";
+
+            const modal = document.getElementById("reader-modal");
+            modal.classList.remove("hidden");
+            modal.classList.add("flex");
+        };
+
+        window.closeReaderModal = function() {
+            activeReaderArticleId = null;
+            const modal = document.getElementById("reader-modal");
+            modal.classList.add("hidden");
+            modal.classList.remove("flex");
+        };
+
+        window.deleteActiveReaderArticle = function() {
+            if (activeReaderArticleId) {
+                deleteArticleById(activeReaderArticleId);
+            }
+        };
+
+        // =====================================================================
+        // 8. TOAST BİLDİRİM SİSTEMİ
+        // =====================================================================
+        window.showToast = function(message, type = "info") {
+            const container = document.getElementById("toast-container");
+            const toast = document.createElement("div");
+
+            const styles = {
+                success: "bg-[#0d1f1c] border-emerald-500/50 text-emerald-200",
+                error: "bg-[#221016] border-rose-500/50 text-rose-200",
+                warning: "bg-[#221b0e] border-amber-500/50 text-amber-200",
+                info: "bg-[#0e1726] border-cyan-500/50 text-cyan-200"
+            };
+            const icons = {
+                success: "fa-circle-check text-emerald-400",
+                error: "fa-circle-xmark text-rose-400",
+                warning: "fa-triangle-exclamation text-amber-400",
+                info: "fa-circle-info text-cyan-400"
+            };
+
+            toast.className = `pointer-events-auto flex items-start gap-3 px-4 py-3 rounded-xl border shadow-2xl text-xs sm:text-sm font-medium transition-all duration-300 ${styles[type] || styles.info}`;
+            toast.innerHTML = `
+                <i class="fa-solid ${icons[type] || icons.info} mt-0.5 text-base shrink-0"></i>
+                <span class="leading-snug">${escapeHtml(message)}</span>
+            `;
+
+            container.appendChild(toast);
+            setTimeout(() => {
+                toast.style.opacity = "0";
+                toast.style.transform = "translateY(8px)";
+                setTimeout(() => toast.remove(), 300);
+            }, 4200);
+        };
+
+        // Başlat
+        bootstrapApp();
+    </script>
+</body>
+</html>
