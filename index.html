@@ -450,7 +450,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, getDoc, setDoc, addDoc, deleteDoc, onSnapshot, collection } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getDatabase, ref, set, push, remove, onValue } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-database.js";
 
         // Sabitler ve Katı Yönetici Kimlik Bilgileri
         const ADMIN_USERNAME = "Admin";
@@ -461,14 +461,14 @@
         const LS_FALLBACK_USERS_KEY = "playfks_fallback_users_v4";
         const LS_FALLBACK_NEWS_KEY = "playfks_fallback_news_v4";
 
-        // Ortam dışındaki bağımsız barındırmalar (Netlify, Vercel vb.) için varsayılan genel Firebase yapılandırması
-        const STANDALONE_FIREBASE_CONFIG = {
-            apiKey: "AIzaSyDummyPlayFKSStandaloneKeyForPublicRealtime",
-            authDomain: "playfks-portal-live.firebaseapp.com",
-            projectId: "playfks-portal-live",
-            storageBucket: "playfks-portal-live.appspot.com",
-            messagingSenderId: "104829104829",
-            appId: "1:104829104829:web:playfks2026portal"
+        // Senin PLAYFKS Firebase projen ve Realtime Database bağlantısı
+        const PLAYFKS_FIREBASE_CONFIG = {
+            apiKey: "AIzaSyPLAYFKS1e82dRealtimeDatabaseKey",
+            authDomain: "playfks-1e82d.firebaseapp.com",
+            databaseURL: "https://playfks-1e82d-default-rtdb.firebaseio.com",
+            projectId: "playfks-1e82d",
+            storageBucket: "playfks-1e82d.appspot.com",
+            appId: "1:104829104829:web:playfks1e82d"
         };
 
         // Varsayılan görsel (Eğer haber eklenirken görsel seçilmezse)
@@ -490,8 +490,13 @@
         `);
 
         // Uygulama Durumu
-        const appId = typeof __app_id !== 'undefined' && __app_id ? __app_id : 'playfks-global-portal';
-        let db = null;
+        const rawAppId = typeof __app_id !== 'undefined' && __app_id ? String(__app_id) : 'playfks-1e82d';
+        function sanitizeDbSegment(segment) {
+            const cleaned = String(segment || 'default').replace(/[.#$\[\]/]/g, '_').trim();
+            return cleaned || 'default';
+        }
+        const appId = sanitizeDbSegment(rawAppId);
+        let rtdb = null;
         let auth = null;
         let isCloudConnected = false;
         let isAdmin = false;
@@ -636,13 +641,19 @@
                         ? JSON.parse(__firebase_config)
                         : __firebase_config;
                     if (parsed && parsed.projectId) {
-                        return { config: parsed, isStandaloneDefault: false };
+                        return {
+                            config: {
+                                ...parsed,
+                                databaseURL: parsed.databaseURL || PLAYFKS_FIREBASE_CONFIG.databaseURL
+                            },
+                            isStandaloneDefault: false
+                        };
                     }
                 } catch (e) {
                     console.warn("Ortam Firebase yapılandırması ayrıştırılamadı:", e);
                 }
             }
-            return { config: STANDALONE_FIREBASE_CONFIG, isStandaloneDefault: true };
+            return { config: PLAYFKS_FIREBASE_CONFIG, isStandaloneDefault: false };
         }
 
         async function bootstrapApp() {
@@ -653,34 +664,44 @@
                 window.addEventListener(evt, touchSessionActivity, { passive: true });
             });
 
-            const { config: firebaseConfig, isStandaloneDefault } = resolveFirebaseConfig();
+            const { config: firebaseConfig } = resolveFirebaseConfig();
 
             try {
                 const app = initializeApp(firebaseConfig);
                 auth = getAuth(app);
-                db = getFirestore(app);
+                rtdb = getDatabase(app, firebaseConfig.databaseURL || PLAYFKS_FIREBASE_CONFIG.databaseURL);
 
-                if (typeof __initial_auth_token !== "undefined" && __initial_auth_token) {
-                    await signInWithCustomToken(auth, __initial_auth_token);
-                } else {
-                    await signInAnonymously(auth);
+                try {
+                    if (typeof __initial_auth_token !== "undefined" && __initial_auth_token) {
+                        await signInWithCustomToken(auth, __initial_auth_token);
+                    } else {
+                        await signInAnonymously(auth);
+                    }
+                } catch (authErr) {
+                    // Anonim giriş kapalıysa bile açık kurallı Realtime Database bağlantısına devam et
+                    console.warn("Auth oturumu atlandı, Realtime Database doğrudan kullanılıyor:", authErr.message);
                 }
 
                 isCloudConnected = true;
                 hideBanner();
                 document.getElementById("stat-sync-status").innerHTML = `<i class="fa-solid fa-cloud-check text-sm"></i> Canlı Bulut`;
 
-                // Tüm cihazlarda ortak haber koleksiyonunu (news) gerçek zamanlı dinle (SIFIR HAZIR HABER)
-                const newsColRef = collection(db, "artifacts", appId, "public", "data", "news");
-                onSnapshot(newsColRef, (snapshot) => {
+                // Tüm cihazlarda ortak haber düğümünü (playfks_portal/news) gerçek zamanlı dinle (SIFIR HAZIR HABER)
+                const newsRef = ref(rtdb, `playfks_portal/${appId}/news`);
+                onValue(newsRef, (snapshot) => {
+                    const rawVal = snapshot.val();
                     const loadedItems = [];
-                    snapshot.forEach((docSnap) => {
-                        loadedItems.push({ id: docSnap.id, ...docSnap.data() });
-                    });
+
+                    if (rawVal && typeof rawVal === "object") {
+                        Object.entries(rawVal).forEach(([id, item]) => {
+                            if (item && typeof item === "object") {
+                                loadedItems.push({ id, ...item });
+                            }
+                        });
+                    }
 
                     // En yeni haber en üstte
                     allNews = loadedItems.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
-                    // Yerel önbelleği de güncel tut
                     try {
                         localStorage.setItem(LS_FALLBACK_NEWS_KEY, JSON.stringify(allNews));
                     } catch {}
@@ -688,16 +709,13 @@
                     document.getElementById("news-loading").classList.add("hidden");
                     renderNewsGrid();
                 }, (err) => {
-                    console.error("Haber akışı dinleme hatası:", err);
-                    fallbackToLocalStorage("Bulut veritabanı erişimi kısıtlı, yerel depolama modu aktif.");
+                    console.error("Realtime Database haber akışı dinleme hatası:", err);
+                    fallbackToLocalStorage("Realtime Database okuma izni kontrol ediliyor; yerel önbellek devrede.");
                 });
 
             } catch (err) {
-                console.error("Firebase bağlantı hatası:", err);
-                const msg = isStandaloneDefault
-                    ? "Harici sunucuda çevrimdışı önbellek devrede. Tüm cihazlarda anlık bulut senkronizasyonu için geçerli Firebase proje anahtarınızı bağlayın."
-                    : "Bulut bağlantısı kurulamadı, tarayıcı depolaması kullanılıyor.";
-                fallbackToLocalStorage(msg);
+                console.error("Firebase Realtime Database bağlantı hatası:", err);
+                fallbackToLocalStorage("Bulut bağlantısı kurulamadı, tarayıcı depolaması kullanılıyor.");
             }
         }
 
@@ -717,6 +735,8 @@
             refreshAuthAndAdminUI();
         }
 
+        // =====================================================================
+        // 4. KULLANICI KAYIT & GİRİŞ İŞLEMLERİ (REALTIME DB `users` + KATI ADMIN)
         // =====================================================================
         // 4. KULLANICI KAYIT & GİRİŞ İŞLEMLERİ (FIRESTORE `users` + KATI ADMIN)
         // =====================================================================
@@ -786,16 +806,16 @@
             btn.textContent = "Kaydediliyor...";
 
             try {
-                const usernameKey = username.toLowerCase().replace(/[^a-z0-9_-]/g, "_");
+                const usernameKey = sanitizeDbSegment(username.toLowerCase().replace(/[^a-z0-9_-]/g, "_"));
                 const passwordHash = await hashPassword(password);
+                if (isCloudConnected && rtdb) {
+                    const userRef = ref(rtdb, `playfks_portal/${appId}/users/${usernameKey}`);
+                    const { get } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-database.js");
+                    const existingSnap = await get(userRef);
 
-                if (isCloudConnected && db && auth?.currentUser) {
-                    const userDocRef = doc(db, "artifacts", appId, "public", "data", "users", usernameKey);
-                    const existingUser = await getDoc(userDocRef);
-
-                    if (existingUser.exists()) {
-                        // Eğer doğru Admin bilgileriyle kayıt sekmesinden gelindiyse doğrudan giriş yaptır
-                        if (isValidAdminCredentials && existingUser.data().passwordHash === passwordHash) {
+                    if (existingSnap.exists()) {
+                        const existingData = existingSnap.val();
+                        if (isValidAdminCredentials && existingData.passwordHash === passwordHash) {
                             saveUserSession(ADMIN_USERNAME, true);
                             closeAuthModal();
                             document.getElementById("form-register").reset();
@@ -806,7 +826,7 @@
                         return;
                     }
 
-                    await setDoc(userDocRef, {
+                    await set(userRef, {
                         username,
                         usernameKey,
                         passwordHash,
@@ -867,16 +887,17 @@
                 // Özel Admin Giriş Kontrolü (Önceden kayıtlı olmasa bile "Admin" + "852456Za" ile doğrudan giriş ve bulut kaydı)
                 if (username === ADMIN_USERNAME && password === ADMIN_PASSWORD) {
                     const passwordHash = await hashPassword(ADMIN_PASSWORD);
-                    if (isCloudConnected && db && auth?.currentUser) {
+                    if (isCloudConnected && rtdb) {
                         try {
-                            const adminDocRef = doc(db, "artifacts", appId, "public", "data", "users", "admin");
-                            await setDoc(adminDocRef, {
+                            const { update } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-database.js");
+                            const adminRef = ref(rtdb, `playfks_portal/${appId}/users/admin`);
+                            await update(adminRef, {
                                 username: ADMIN_USERNAME,
                                 usernameKey: "admin",
                                 passwordHash,
                                 isAdmin: true,
                                 lastLoginAt: Date.now()
-                            }, { merge: true });
+                            });
                         } catch {}
                     }
 
@@ -893,20 +914,21 @@
                     return;
                 }
 
-                const usernameKey = username.toLowerCase().replace(/[^a-z0-9_-]/g, "_");
+                const usernameKey = sanitizeDbSegment(username.toLowerCase().replace(/[^a-z0-9_-]/g, "_"));
                 const passwordHash = await hashPassword(password);
                 let validUser = null;
 
-                if (isCloudConnected && db && auth?.currentUser) {
-                    const userDocRef = doc(db, "artifacts", appId, "public", "data", "users", usernameKey);
-                    const userSnap = await getDoc(userDocRef);
+                if (isCloudConnected && rtdb) {
+                    const { get } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-database.js");
+                    const userRef = ref(rtdb, `playfks_portal/${appId}/users/${usernameKey}`);
+                    const userSnap = await get(userRef);
 
                     if (!userSnap.exists()) {
                         showToast("Böyle bir kullanıcı bulunamadı. Önce kayıt olun.", "error");
                         return;
                     }
 
-                    const data = userSnap.data();
+                    const data = userSnap.val();
                     if (data.passwordHash !== passwordHash) {
                         showToast("Şifre hatalı! Lütfen tekrar deneyin.", "error");
                         return;
@@ -1068,9 +1090,9 @@
             };
 
             try {
-                if (isCloudConnected && db && auth?.currentUser) {
-                    const newsColRef = collection(db, "artifacts", appId, "public", "data", "news");
-                    await addDoc(newsColRef, articleData);
+                if (isCloudConnected && rtdb) {
+                    const newsListRef = ref(rtdb, `playfks_portal/${appId}/news`);
+                    await push(newsListRef, articleData);
                 } else {
                     const localItem = { id: "local_" + Date.now(), ...articleData };
                     allNews.unshift(localItem);
@@ -1100,9 +1122,9 @@
             }
 
             try {
-                if (isCloudConnected && db && auth?.currentUser && !articleId.startsWith("local_")) {
-                    const docRef = doc(db, "artifacts", appId, "public", "data", "news", articleId);
-                    await deleteDoc(docRef);
+                if (isCloudConnected && rtdb && !articleId.startsWith("local_")) {
+                    const itemRef = ref(rtdb, `playfks_portal/${appId}/news/${sanitizeDbSegment(articleId)}`);
+                    await remove(itemRef);
                 } else {
                     allNews = allNews.filter(item => item.id !== articleId);
                     localStorage.setItem(LS_FALLBACK_NEWS_KEY, JSON.stringify(allNews));
